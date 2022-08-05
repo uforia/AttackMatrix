@@ -347,9 +347,10 @@ def findActorOverlap(options, Actors=[]):
                             'description': ttpdescription,
                         }
     for overlapkey in overlapkeys:
-        if overlapkey in ttps:
-            if not bool(ttps[overlapkey]):
-                del ttps[overlapkey]
+        if 'ttps' in locals():
+            if overlapkey in ttps:
+                if not bool(ttps[overlapkey]):
+                    del ttps[overlapkey]
     for actor in results['Actors']:
         results['Actors'][actor].update(ttps)
     return {k: v for k, v in results.items() if v}
