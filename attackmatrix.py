@@ -635,7 +635,8 @@ def Transform(options, AttackMatrix):
             if not entry.get('x_mitre_deprecated') or (entry.get('x_mitre_deprecated') and options.deprecated):
                 if entry.get('type'):
                     if entry['type'] == 'malware':
-                        names = entry['x_mitre_aliases']
+                        if 'x_mitre_aliases' in entry:
+                            names = entry['x_mitre_aliases']
                         if entry.get('description'):
                             if (entry.get('x_mitre_deprecated') and options.deprecated):
                                 if isinstance(names, list):
@@ -686,7 +687,8 @@ def Transform(options, AttackMatrix):
             if not entry.get('x_mitre_deprecated') or (entry.get('x_mitre_deprecated') and options.deprecated):
                 if entry.get('type'):
                     if entry['type'] == 'tool':
-                        names = entry['x_mitre_aliases']
+                        if 'x_mitre_aliases' in entry:
+                            names = entry['x_mitre_aliases']
                         if entry.get('description'):
                             if (entry.get('x_mitre_deprecated') and options.deprecated):
                                 description = names + ": " + entry['description']
