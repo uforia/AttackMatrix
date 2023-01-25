@@ -170,8 +170,7 @@ def findActorOverlap(options, actors=[]):
         response = {}
         if not len(actors)>1:
             response = {
-                'name': 'API Error',
-                'description': 'Specify at least two Actors to check for overlap!'
+                'error': 'Specify at least two Actors to check for overlap!',
             }
         else:
             cache = loadCache(options)
@@ -206,8 +205,7 @@ def findActorOverlap(options, actors=[]):
             response['count'] = count/len(actors)
     except Exception as e:
             response = {
-                'name': 'Python Error',
-                'description': str(type(e))+': '+str(e),
+                'error': 'Python Error:'+str(type(e))+': '+str(e),
             }
     finally:
         return response
@@ -218,8 +216,7 @@ def findTTPOverlap(options, ttps=[]):
         response = {}
         if not len(ttps)>1:
             response = {
-                'name': 'API Error',
-                'description': 'Specify at least two TTPs to check for overlap!'
+                'error': 'Specify at least two TTPs to check for overlap!',
             }
         else:
             cache = loadCache(options)
@@ -236,8 +233,7 @@ def findTTPOverlap(options, ttps=[]):
                     del response[actor]
     except Exception as e:
             response = {
-                'name': 'Python Error',
-                'description': str(type(e))+': '+str(e),
+                'Python Error: '+str(type(e))+': '+str(e),
             }
             response['count'] = count/len(actors)
     finally:
@@ -249,8 +245,7 @@ def search(options, params=[]):
         response = {}
         if not len(params):
             response = {
-                'name': 'API Error',
-                'description': 'Specify at least one search parameter!'
+                'error': 'Specify at least one search parameter!',
             }
         else:
             cache = loadCache(options)
@@ -266,8 +261,7 @@ def search(options, params=[]):
             response['count'] = sum(len(response[item]) for item in response)
     except Exception as e:
         response = {
-            'name': 'Python Error',
-            'description': str(type(e))+': '+str(e),
+            'error': 'Python Error: '+str(type(e))+': '+str(e),
         }
     finally:
         return response
