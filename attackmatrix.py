@@ -261,7 +261,7 @@ def search(options, params=[]):
                     contents = ' '.join(metadata['name'])
                     contents += ' '.join(metadata['description'])
                     contents += ' '.join(metadata['url'])
-                    if all(term in contents.lower() for term in params):
+                    if all(term.lower() in contents.lower() for term in params):
                         response[category][object] = cache[category][object]
             response['count'] = sum(len(response[item]) for item in response)
     except Exception as e:
