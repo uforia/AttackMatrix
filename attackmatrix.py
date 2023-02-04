@@ -130,8 +130,10 @@ async def query(request: Request,
         else:
             treepath = request.path_params['treepath'].split('/')
             results = cache[treepath[0]][treepath[1]] if len(treepath)>1 else cache[treepath[0]]
-    except KeyError:
-        return None
+    except KeyError as e:
+        results = {
+            'error': 'Key does not exist: '+str(e),
+        }
     finally:
         return JSONResponse(results)
 
@@ -176,31 +178,45 @@ def findActorOverlap(options, actors=[]):
             cache = loadCache(options)
             response = collections.defaultdict(lambda: {}, {})
             ttps = {}
+            actors = [actor.upper() for actor in actors]
+            # Build a list of all TTPs of all actors (OR)
             for actor in actors:
                 response[actor] = {}
-                for category in categories:
-                    if category in cache['Actors'][actor]:
-                        for ttp in cache['Actors'][actor][category]:
-                            if not category in ttps:
-                                ttps[category] = {}
-                            ttps[category][ttp] = cache['Actors'][actor][category][ttp]
+                if actor in cache['Actors']:
+                    for category in categories:
+                        if category in cache['Actors'][actor]:
+                            for ttp in cache['Actors'][actor][category]:
+                                if not category in ttps:
+                                    ttps[category] = {}
+                                ttps[category][ttp] = cache['Actors'][actor][category][ttp]
+                else:
+                    response = {
+                        'error': 'AttackMatrix: actor '+actor+' does not exist!'
+                    }
+                    return response
             # Wipe TTP categories and types that do not appear in all actors
-            for ttpcategory in list(ttps):
-                for ttp in list(ttps[ttpcategory]):
+            commonttps = {}
+            for ttpcategory in ttps:
+                commonttps[ttpcategory] = {}
+                for ttp in ttps[ttpcategory]:
+                    # First, assume the TTP is valid
+                    exists = True
                     for actor in actors:
-                        if ttpcategory in cache['Actors'][actor]:
-                            if not ttp in cache['Actors'][actor][ttpcategory]:
-                                if ttp in ttps[ttpcategory]:
-                                    del ttps[ttpcategory][ttp]
+                        if not ttpcategory in cache['Actors'][actor]:
+                            # If the TTP category does not exist for that actor, it is not a valid TTP
+                            exists = False
                         else:
-                            if ttpcategory in ttps:
-                                del ttps[ttpcategory]
+                            if not ttp in cache['Actors'][actor][ttpcategory]:
+                                # If the TTP does not exist for an actor, it is not a valid TTP
+                                exists = False
+                    if exists:
+                        commonttps[ttpcategory][ttp] = cache['Actors'][actor][ttpcategory][ttp]
             count = 0
             for actor in actors:
-                for ttpcategory in ttps:
-                    if len(ttps[ttpcategory])>0:
-                        response[actor][ttpcategory] = ttps[ttpcategory]
-                        count += len(ttps[ttpcategory])
+                for ttpcategory in commonttps:
+                    if len(commonttps[ttpcategory])>0:
+                        response[actor][ttpcategory] = commonttps[ttpcategory]
+                        count += len(commonttps[ttpcategory])
                 response[actor]['Metadata'] = cache['Actors'][actor]['Metadata']
             response['count'] = count/len(actors)
     except Exception as e:
@@ -221,6 +237,7 @@ def findTTPOverlap(options, ttps=[]):
         else:
             cache = loadCache(options)
             response = {}
+            ttps = [ttp.upper() for ttp in ttps]
             for actor in cache['Actors']:
                 actorttps = []
                 response[actor] = {}
