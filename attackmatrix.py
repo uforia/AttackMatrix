@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# (c) 2021 Arnim Eijkhoudt (arnime <thingamajic> kpn-cert.nl), GPLv3
+# (c) 2021-2023 Arnim Eijkhoudt (uforia@github.com), GPLv3
 #
 # Please note: the MITRE ATT&CK® framework is a registered trademark
 # of MITRE. See https://attack.mitre.org/ for more information.
@@ -18,6 +18,7 @@ import logging
 import json
 import pathlib
 import pprint
+import re
 import shutil
 import string
 import urllib.request
@@ -96,6 +97,19 @@ tags_metadata = [
                        '(http://' + options.ip + ':' + str(options.port) + '/api/ttpoverlap?ttp=S0002&ttp=S0008&ttp=T1560.001) '
                        'to find which *Actors* use *Tool S0002*, *Tool S0008* and *Technique T1560.001*.',
     },
+    {
+        'name': 'findactor',
+        'description': 'Given the set of TTPs, find out which subsets (\'slices\') of those TTPs match any known '
+                       'actors. Returns an overview of potentially matching Actors, with the amount of matching and '
+                       'total TTPs for that Actor. This is particularly useful if you have a TTP set that would not '
+                       'match a known Actor, e.g. due to errors, incompleteness, TTPs not matching that Actor '
+                       '(e.g. because of an Actor changing its TTPs), etc. This can be a somewhat resource intensive '
+                       'query, especially with large TTP sets.'
+                       '<br /><br />'
+                       '[Example query]'
+                       '(http://' + options.ip + ':' + str(options.port) + '/api/findactor?ttp=T1023&ttp=T1056&ttp=T1560.001)'
+                       ' to find which *Actors* use use *Technique T1023*, *Technique T1056* and *Technique T1560.001*.',
+    },
 ]
 app = FastAPI(title='MITRE ATT&CK Matrix API', openapi_tags=tags_metadata)
 
@@ -167,12 +181,23 @@ async def ttpOverlap(request: Request,
     return findTTPOverlap(options, ttps)
 
 
+@app.get('/api/findactor', tags=['findactor'])
+async def findActor(request: Request,
+                     ttps: list = Query([]),
+                     token: Optional[str] = None):
+    if options.token:
+        if token != options.token:
+            raise HTTPException(status_code=403, detail='Access denied: missing or incorrect token')
+    return findActorByTTPs(options, ttps)
+
+
 def findActorOverlap(options, actors=[]):
     try:
         response = {}
         if not len(actors)>1:
             response = {
                 'error': 'Specify at least two Actors to check for overlap!',
+                'count': 0,
             }
         else:
             cache = loadCache(options)
@@ -191,7 +216,8 @@ def findActorOverlap(options, actors=[]):
                                 ttps[category][ttp] = cache['Actors'][actor][category][ttp]
                 else:
                     response = {
-                        'error': 'AttackMatrix: actor '+actor+' does not exist!'
+                        'error': 'AttackMatrix: actor '+actor+' does not exist!',
+                        'count': 0,
                     }
                     return response
             # Wipe TTP categories and types that do not appear in all actors
@@ -220,9 +246,10 @@ def findActorOverlap(options, actors=[]):
                 response[actor]['Metadata'] = cache['Actors'][actor]['Metadata']
             response['count'] = count/len(actors)
     except Exception as e:
-            response = {
-                'error': 'Python Error:'+str(type(e))+': '+str(e),
-            }
+        response = {
+            'error': 'Python Error: '+str(type(e))+': '+str(e),
+            'count': 0,
+        }
     finally:
         return response
 
@@ -233,6 +260,7 @@ def findTTPOverlap(options, ttps=[]):
         if not len(ttps)>1:
             response = {
                 'error': 'Specify at least two TTPs to check for overlap!',
+                'count': 0,
             }
         else:
             cache = loadCache(options)
@@ -249,10 +277,70 @@ def findTTPOverlap(options, ttps=[]):
                 else:
                     del response[actor]
     except Exception as e:
+        response = {
+            'error': 'Python Error: '+str(type(e))+': '+str(e),
+            'count': 0,
+        }
+    finally:
+        return response
+
+
+def findActorByTTPs(options, ttps=[]):
+    try:
+        response = {}
+        if not len(ttps)>2:
             response = {
-                'Python Error: '+str(type(e))+': '+str(e),
+                'error': 'Specify at least three TTPs to search for matching Actors!',
+                'count': 0,
             }
-            response['count'] = count/len(actors)
+        else:
+            cache = loadCache(options)
+            response = collections.OrderedDict()
+            ttps = [ttp.upper() for ttp in ttps]
+            num_given_ttps = len(ttps)
+            slices = list(reversed([_ for _ in sorted(list(map(ttps.__getitem__, itertools.starmap(slice, itertools.combinations(range(len(ttps)+1), 2)))), key=len) if len(_)>2]))
+            if len(slices):
+                for subset in slices:
+                    searchterms = '&ttps='.join([urllib.parse.quote(_) for _ in subset])
+                    if re.search(r"[\w\s,.\+\-]+", searchterms):
+                        result = findTTPOverlap(options,subset)
+                        if len(result):
+                            for actor in result.keys():
+                                if not actor in response:
+                                    num_known_ttps = 0
+                                    for category in categories:
+                                        if category in result[actor]:
+                                            num_known_ttps += len(result[actor][category])
+                                    response[actor] = {
+                                        'id': actor,
+                                        'name': ', '.join(result[actor]['Metadata']['name']),
+                                        'matching_ttps': subset,
+                                        'num_matching_ttps': len(subset),
+                                        'num_given_ttps': num_given_ttps,
+                                        'num_known_ttps': num_known_ttps,
+                                        'matching_coverage': '%.2f' % ((len(subset)/num_given_ttps)*100) + '%',
+                                        'total_coverage': '%.2f' % ((len(subset)/num_known_ttps)*100) + '%'
+                                    }
+                                else:
+                                    if len(subset) > response[actor]['num_matching_ttps']:
+                                        response[actor] = {
+                                            'id': actor,
+                                            'name': ', '.join(result[actor]['Metadata']['name']),
+                                            'matching_ttps': subset,
+                                            'num_matching_ttps': len(subset),
+                                            'num_given_ttps': num_given_ttps,
+                                            'num_known_ttps': num_known_ttps,
+                                            'matching_coverage': '%.2f' % ((len(subset)/num_given_ttps)*100) + '%',
+                                            'total_coverage': '%.2f' % ((len(subset)/num_known_ttps)*100) + '%'
+                                        }
+            if len(response):
+                response['count'] = len(response)
+                return response
+    except Exception as e:
+        response = {
+            'error': 'Python Error: '+str(type(e))+': '+str(e),
+            'count': 0,
+        }
     finally:
         return response
 
@@ -263,6 +351,7 @@ def search(options, params=[]):
         if not len(params):
             response = {
                 'error': 'Specify at least one search parameter!',
+                'count': 0,
             }
         else:
             cache = loadCache(options)
@@ -279,6 +368,7 @@ def search(options, params=[]):
     except Exception as e:
         response = {
             'error': 'Python Error: '+str(type(e))+': '+str(e),
+            'count': 0,
         }
     finally:
         return response
