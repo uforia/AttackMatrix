@@ -438,14 +438,13 @@ def GenerateMatrix(options):
                             for object in objects[type]:
                                 if object['object-type'] in typemap:
                                     type = typemap[object['object-type']]
-                                    urls = object['references'] if 'references' in object else None
                                     objectnames = object['name']
                                     objectdescriptions = object['description']
-                                    objecturls = object['references'] if 'references' in object else None
+                                    objecturls = object['references'] if 'references' in object else [] 
                                     objectmetadata = {
                                         'name': [object['name']],
                                         'description': [object['description']],
-                                        'url': urls,
+                                        'url': objecturls,
                                     }
                                     mitreid = object['id'].lower().replace('fg','').replace('id','').upper()
                                     uid = mitreid
