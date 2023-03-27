@@ -21,8 +21,10 @@ import pprint
 import re
 import shutil
 import string
+import sys
 import urllib.request
 import uvicorn
+import yaml
 from config import settings as options
 from config.matrixtable import Matrices
 from fastapi import FastAPI, HTTPException, Request, Query
@@ -30,25 +32,45 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from typing import Optional
 
 
-typemap = collections.OrderedDict({
-    'intrusion-set': 'Actors',
-    'campaign': 'Campaigns',
-    'malware': 'Malwares',
-    'course-of-action': 'Mitigations',
-    'x-mitre-tactic': 'Tactics',
+hashmap = {
+    'fgdsid': 'Data Sources',
+    'fgmid': 'Mitigations',
+}
+typemap = {
     'attack-pattern': 'Techniques',
+    'case-studies': 'Case Studies',
+    'campaign': 'Campaigns',
+    'course-of-action': 'Mitigations',
+    'data component': 'Data Sources',
+    'data source': 'Data Sources',
+    'detections': 'Data Sources',
+    'intrusion-set': 'Actors',
+    'malware': 'Malwares',
+    'mitigation': 'Mitigations',
+    'mitigations': 'Mitigations',
+    'tactic': 'Tactics',
+    'tactics': 'Tactics',
+    'technique': 'Techniques',
+    'techniques': 'Techniques',
     'tool': 'Tools',
+    'tools': 'Tools',
     'uid': 'UID',
-})
+    'x-mitre-data-component': 'Data Sources',
+    'x-mitre-data-source': 'Data Sources',
+    'x-mitre-matrix': 'Matrices',
+    'x-mitre-tactic': 'Tactics',
+}
 categories=[
     'Actors',
     'Campaigns',
+    'Case Studies',
+    'Data Sources',
     'Malwares',
     'Matrices',
     'Mitigations',
     'Tactics',
     'Techniques',
-    'Tools'
+    'Tools',
 ]
 tags_metadata = [
     {
@@ -143,6 +165,7 @@ async def query(request: Request,
             }
         else:
             treepath = request.path_params['treepath'].split('/')
+            treepath = [i for i in treepath if i]
             results = cache[treepath[0]][treepath[1]] if len(treepath)>1 else cache[treepath[0]]
     except KeyError as e:
         results = {
@@ -396,122 +419,210 @@ def GenerateMatrix(options):
         if not matrixfile.exists():
             # Missing ATT&CK matrix file
             continue
-        matrixname = Matrices[matrix]['name']
-        matrixdescription = Matrices[matrix]['description']
-        matrixurl = Matrices[matrix]['url']
-        merged['Matrices'][matrix] = {'Metadata': {
-                'name': [matrixname],
-                'description': [matrixdescription],
-                'url': [matrixurl],
-        }}
-        with open(matrixfile, 'r') as f:
-            objects = json.loads(f.read())['objects']
-            try:
-                # Create all objects
-                for object in objects:
-                    if object['type'] in typemap:
-                        type = typemap[object['type']]
-                        objectnames = []
-                        objectdescriptions = []
-                        objecturls = []
-                        objectmetadata = {
-                            'names': objectnames,
-                            'descriptions': objectdescriptions,
-                            'urls': objecturls,
-                        }
-                        uid = object['id']
-                        mitreid = None
-                        revoked = False
-                        deprecated = False
-                        if 'description' in object:
-                            objectdescriptions.append(object['description'])
-                        if 'revoked' in object:
-                            revoked = object['revoked']
-                        if 'x_mitre_deprecated' in object:
-                            deprecated = object['x_mitre_deprecated']
-                        if 'external_references' in object:
-                            for external_reference in object['external_references']:
-                                if 'external_id' in external_reference:
-                                    if 'mitre' in external_reference['source_name']:
-                                        mitreid = external_reference['external_id']
-                                        if 'name' in object:
-                                            objectnames.append(object['name'])
-                                        if 'aliases' in object:
-                                            for alias in object['aliases']:
-                                                if alias not in objectnames:
-                                                    objectnames.append(alias)
-                                        if 'description' in object:
-                                            if object['description'] not in objectdescriptions:
-                                                objectdescriptions.append(object['description'])
-                                        if 'url' in external_reference:
-                                            objecturls.append(external_reference['url'])
-                        if revoked:
-                            objectdescriptions.append('Note: This MITRE ID has been **revoked** and should no longer be used.\n')
-                        if deprecated:
-                            objectdescriptions.append('Note: This MITRE ID has been **deprecated** and should no longer be used.\n')
-                        if not mitreid in merged[type]:
-                            merged[type][mitreid] = {}
-                        merged[type][mitreid]['Metadata'] = {
-                            'name': objectnames,
-                            'description': objectdescriptions,
-                            'url': objecturls,
-                        }
-                        # Add the matrix to the ID
-                        if 'Matrices' not in merged[type][mitreid]:
-                            merged[type][mitreid]['Matrices'] = {}
+        else:
+            matrixname = Matrices[matrix]['name']
+            matrixdescription = Matrices[matrix]['description']
+            matrixtype = Matrices[matrix]['type']
+            matrixurl = Matrices[matrix]['url']
+            merged['Matrices'][matrix] = {'Metadata': {
+                    'name': [matrixname],
+                    'description': [matrixdescription],
+                    'url': [matrixurl],
+            }}
+            if matrixtype == 'yaml':
+                with open(matrixfile, 'r') as f:
+                    objects = yaml.safe_load(f.read())
+                try:
+                    for type in objects:
+                        if type.title() in categories:
+                            for object in objects[type]:
+                                if object['object-type'] in typemap:
+                                    type = typemap[object['object-type']]
+                                    urls = object['references'] if 'references' in object else None
+                                    objectnames = object['name']
+                                    objectdescriptions = object['description']
+                                    objecturls = object['references'] if 'references' in object else None
+                                    objectmetadata = {
+                                        'name': [object['name']],
+                                        'description': [object['description']],
+                                        'url': urls,
+                                    }
+                                    mitreid = object['id'].lower().replace('fg','').replace('id','').upper()
+                                    uid = mitreid
+                                    if not mitreid in merged[type]:
+                                        merged[type][mitreid] = {}
+                                    if not 'Metadata' in merged[type][mitreid]:
+                                        merged[type][mitreid]['Metadata'] = objectmetadata
+                                    # Add the matrix to the ID
+                                    if 'Matrices' not in merged[type][mitreid]:
+                                        merged[type][mitreid]['Matrices'] = {}
+                                    if not matrix in merged[type][mitreid]['Matrices']:
+                                        merged[type][mitreid]['Matrices'][matrix] = merged['Matrices'][matrix]['Metadata']
+                                    merged[type]['UIDs'][uid] = mitreid
+                except:
+                    print("Failed to parse a YAML object:")
+                    pprint.pprint(object)
+                    raise
+            if matrixtype == 'json':
+                # Debug code
+                with open(matrixfile, 'r') as f:
+                    contents = json.loads(f.read())
+                    if 'objects' in contents:
+                        objecttype = 'type'
+                        objects = contents['objects']
+                try:
+                    # Create all objects
+                    for object in objects:
+                        if object[objecttype] in typemap:
+                            type = typemap[object[objecttype]]
+                            objectnames = []
+                            objectdescriptions = []
+                            objecturls = []
+                            objectmetadata = {
+                                'names': objectnames,
+                                'descriptions': objectdescriptions,
+                                'urls': objecturls,
+                            }
+                            uid = object['id']
+                            mitreid = None
+                            revoked = False
+                            deprecated = False
+                            if 'description' in object:
+                                objectdescriptions.append(object['description'])
+                            if 'revoked' in object:
+                                revoked = object['revoked']
+                            if 'x_mitre_deprecated' in object:
+                                deprecated = object['x_mitre_deprecated']
+                            if 'external_references' in object:
+                                for external_reference in object['external_references']:
+                                    if 'external_id' in external_reference:
+                                        if 'mitre' in external_reference['source_name']:
+                                            mitreid = external_reference['external_id']
+                                            if 'name' in object:
+                                                objectnames.append(object['name'])
+                                            if 'aliases' in object:
+                                                for alias in object['aliases']:
+                                                    if alias not in objectnames:
+                                                        objectnames.append(alias)
+                                            if 'description' in object:
+                                                if object['description'] not in objectdescriptions:
+                                                    objectdescriptions.append(object['description'])
+                                            if 'url' in external_reference:
+                                                objecturls.append(external_reference['url'])
+                            if revoked:
+                                objectdescriptions.append('Note: This MITRE ID has been **revoked** and should no longer be used.\n')
+                            if deprecated:
+                                objectdescriptions.append('Note: This MITRE ID has been **deprecated** and should no longer be used.\n')
+                            if not mitreid in merged[type]:
+                                merged[type][mitreid] = {}
+                            merged[type][mitreid]['Metadata'] = {
+                                'name': objectnames,
+                                'description': objectdescriptions,
+                                'url': objecturls,
+                            }
+                            # Add the matrix to the ID
+                            if 'Matrices' not in merged[type][mitreid]:
+                                merged[type][mitreid]['Matrices'] = {}
                             if not matrix in merged[type][mitreid]['Matrices']:
                                 merged[type][mitreid]['Matrices'][matrix] = merged['Matrices'][matrix]['Metadata']
-                        # Add the UID to the list
-                        merged[type]['UIDs'][uid] = mitreid
-            except:
-                print("Failed to parse a JSON object:")
-                pprint.pprint(object)
-                raise
+                            # Add the UID to the list
+                            merged[type]['UIDs'][uid] = mitreid
+                except:
+                    print("Failed to parse a JSON object:")
+                    pprint.pprint(object)
+                    raise
+    # Build the relationships between MITRE IDs
     for matrix in Matrices:
         matrixfile = pathlib.Path(options.cachedir+'/'+Matrices[matrix]['file'])
         if not matrixfile.exists():
             # Missing ATT&CK matrix file
             continue
-        with open(matrixfile, 'r') as f:
-            objects = json.loads(f.read())['objects']
-        try:
-            # Create all relationships
-            for object in objects:
-                if not object['type'] in typemap:
-                    type = object['type']
-                    if type == 'relationship':
-                        try:
-                            sourceuid = object['source_ref']
-                            sourcemitretype = sourceuid.split('--')[0]
-                            targetuid = object['target_ref']
-                            targetmitretype = targetuid.split('--')[0]
-                            if sourcemitretype in typemap and targetmitretype in typemap:
-                                sourcetype = typemap[sourcemitretype]
-                                sourcemitreid = merged[sourcetype]['UIDs'][sourceuid]
-                                source = merged[sourcetype][sourcemitreid]
-                                targettype = typemap[targetmitretype]
-                                targetmitreid = merged[targettype]['UIDs'][targetuid]
-                                target = merged[targettype][targetmitreid]
-                                if not targettype in source:
-                                    source[targettype] = {}
-                                source[targettype][targetmitreid] = target['Metadata']
-                                if not sourcetype in target:
-                                    target[sourcetype] = {}
-                                target[sourcetype][sourcemitreid] = source['Metadata']
-                        except KeyError:
-                            print("Failed to build a relationship between:")
-                            #print(sourcetype+'/'+sourcemitreid,'->',targettype+'/'+targetmitreid)
-                            print(sourcemitreid)
-                            pprint.pprint(source)
-                            print(targetmitreid)
-                            pprint.pprint(target)
-                            raise
-        except:
-            print("Failed to parse JSON object:")
-            pprint.pprint(object)
-            raise
+        else:
+            matrixname = Matrices[matrix]['name']
+            matrixdescription = Matrices[matrix]['description']
+            matrixtype = Matrices[matrix]['type']
+            matrixurl = Matrices[matrix]['url']
+            if matrixtype == 'yaml':
+                with open(matrixfile, 'r') as f:
+                    objects = yaml.safe_load(f.read())
+                try:
+                    # Link all objects
+                    for type in objects:
+                        if type in typemap:
+                            try:
+                                sourcetype = typemap[type]
+                                for object in objects[type]:
+                                    sourcemitreid = object['id'].upper().replace('FG','').replace('ID','')
+                                    for subtree in object:
+                                        if subtree in typemap:
+                                            targettype = typemap[subtree]
+                                            uids = object[subtree]
+                                            if len(uids):
+                                                for uid in uids:
+                                                    if isinstance(uid,dict):
+                                                        for item in uid:
+                                                            if item in hashmap:
+                                                                targetmitreid = uid[item].upper().replace('FG','').replace('ID','')
+                                                    else:
+                                                        targetmitreid = uid.upper().replace('FG','').replace('ID','')
+                                                    source = merged[sourcetype][sourcemitreid]
+                                                    target = merged[targettype][targetmitreid]
+                                                    if not targettype in source:
+                                                        source[targettype] = {}
+                                                    source[targettype][targetmitreid] = target['Metadata']
+                                                    if not sourcetype in target:
+                                                        target[sourcetype] = {}
+                                                    target[sourcetype][sourcemitreid] = source['Metadata']
+                            except:
+                                print("Failed to build a relationship between:")
+                                print(sourcetype+'/'+sourcemitreid,'->',targettype+'/'+targetmitreid)
+                                raise
+                except:
+                    print("Failed to parse a YAML object:")
+                    pprint.pprint(object)
+                    raise
+            if matrixtype == 'json':
+                with open(matrixfile, 'r') as f:
+                    objects = json.loads(f.read())['objects']
+                try:
+                    # Create all relationships
+                    for object in objects:
+                        if not object['type'] in typemap:
+                            type = object['type']
+                            if type == 'relationship':
+                                try:
+                                    sourceuid = object['source_ref']
+                                    sourcemitretype = sourceuid.split('--')[0]
+                                    targetuid = object['target_ref']
+                                    targetmitretype = targetuid.split('--')[0]
+                                    if sourcemitretype in typemap and targetmitretype in typemap:
+                                        sourcetype = typemap[sourcemitretype]
+                                        sourcemitreid = merged[sourcetype]['UIDs'][sourceuid]
+                                        source = merged[sourcetype][sourcemitreid]
+                                        targettype = typemap[targetmitretype]
+                                        targetmitreid = merged[targettype]['UIDs'][targetuid]
+                                        target = merged[targettype][targetmitreid]
+                                        if not targettype in source:
+                                            source[targettype] = {}
+                                        source[targettype][targetmitreid] = target['Metadata']
+                                        if not sourcetype in target:
+                                            target[sourcetype] = {}
+                                        target[sourcetype][sourcemitreid] = source['Metadata']
+                                except KeyError:
+                                    print("Failed to build a relationship between:")
+                                    #print(sourcetype+'/'+sourcemitreid,'->',targettype+'/'+targetmitreid)
+                                    print(sourcemitreid)
+                                    pprint.pprint(source)
+                                    print(targetmitreid)
+                                    pprint.pprint(target)
+                                    raise
+                except:
+                    print("Failed to parse JSON object:")
+                    pprint.pprint(object)
+                    raise
     for category in categories:
-        del merged[category]['UIDs']
+        if 'UIDs' in merged[category]:
+            del merged[category]['UIDs']
     return merged
 
 def DownloadMatrices(options):
@@ -598,11 +709,12 @@ if __name__ == "__main__":
             logging.info('Generating the cachefile: ' + cachefile.name)
         DownloadMatrices(options)
         cache = GenerateMatrix(options)
-        with open(cachefile, 'w') as cachefile:
-            json.dump(cache, cachefile)
+        with open(cachefile, 'w') as newcachefile:
+            json.dump(cache, newcachefile)
     if not options.daemonize:
         parser.print_help()
     else:
+        cachefile = pathlib.Path(options.cachefile)
         if not cachefile.exists():
             if options.verbose:
                 logging.info('Loading the cachefile: ' + cachefile.name)
