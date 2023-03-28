@@ -12,7 +12,7 @@ env/
 build/
 config/settings.py.kpn
 matrices/*.json
-matrices/*.db
+matrices/*.yaml
 *.db
 develop-eggs/
 dist/
