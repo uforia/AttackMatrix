@@ -93,8 +93,8 @@ tags_metadata = [
                        '<br /><br />'
                        '[Example query]'
                        '(http://' + options.ip + ':' + str(options.port) +
-                       '/api/search?params=dragon&params=capture&params=property) '
-                       'to find all entities with the words *dragon*, *capture* and *property* in all ATT&CK matrices.',
+                       '/api/search?params=dragon) '
+                       'to find all entities with the word *dragon*.',
     },
     {
         'name': 'actoroverlap',
