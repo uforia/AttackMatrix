@@ -129,12 +129,13 @@ tags_metadata = [
                        'query, especially with large TTP sets.'
                        '<br /><br />'
                        '[Example query]'
-                       '(http://' + options.ip + ':' + str(options.port) + '/api/findactor?ttps=T1023&ttps=T1056&ttps=T1560.001)'
-                       ' to find which *Actors* use use *Technique T1023*, *Technique T1056* and *Technique T1560.001*.',
+                       '(http://' + options.ip + ':' + str(options.port) + '/api/findactor?ttps=T1078&ttps=T1588.002&'
+                       'ttps=S0002&ttps=S0008&ttps=S0032&ttps=T1574'
+                       ' to find which *Actors* use use *Techniques T1078, T1588.002 and T1574* and *Tools S0002, S0008'
+                       ' and S0032*.',
     },
 ]
 app = FastAPI(title='MITRE ATT&CK Matrix API', openapi_tags=tags_metadata)
-
 
 @app.get('/', tags=['docs'])
 async def read_root():
