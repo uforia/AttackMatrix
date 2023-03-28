@@ -3,7 +3,7 @@
 # FastAPI config
 #
 # Listening IP and PORT
-ip = '0.0.0.0'
+ip = '149.210.137.179'
 port = 8008
 # Optional authentication token. 'None' means disabled.
 token = None

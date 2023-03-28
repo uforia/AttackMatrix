@@ -116,7 +116,7 @@ tags_metadata = [
                        'the matching Actors with all of their ATT&CK® entity types (including names/descriptions).'
                        '<br /><br />'
                        '[Example query]'
-                       '(http://' + options.ip + ':' + str(options.port) + '/api/ttpoverlap?ttp=S0002&ttp=S0008&ttp=T1560.001) '
+                       '(http://' + options.ip + ':' + str(options.port) + '/api/ttpoverlap?ttps=S0002&ttps=S0008&ttps=T1560.001) '
                        'to find which *Actors* use *Tool S0002*, *Tool S0008* and *Technique T1560.001*.',
     },
     {
@@ -129,7 +129,7 @@ tags_metadata = [
                        'query, especially with large TTP sets.'
                        '<br /><br />'
                        '[Example query]'
-                       '(http://' + options.ip + ':' + str(options.port) + '/api/findactor?ttp=T1023&ttp=T1056&ttp=T1560.001)'
+                       '(http://' + options.ip + ':' + str(options.port) + '/api/findactor?ttps=T1023&ttps=T1056&ttps=T1560.001)'
                        ' to find which *Actors* use use *Technique T1023*, *Technique T1056* and *Technique T1560.001*.',
     },
 ]
