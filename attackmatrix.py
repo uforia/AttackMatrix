@@ -130,7 +130,7 @@ tags_metadata = [
                        '<br /><br />'
                        '[Example query]'
                        '(http://' + options.ip + ':' + str(options.port) + '/api/findactor?ttps=T1078&ttps=T1588.002&'
-                       'ttps=S0002&ttps=S0008&ttps=S0032&ttps=T1574'
+                       'ttps=S0002&ttps=S0008&ttps=S0032&ttps=T1574)'
                        ' to find which *Actors* use use *Techniques T1078, T1588.002 and T1574* and *Tools S0002, S0008'
                        ' and S0032*.',
     },
