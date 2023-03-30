@@ -500,8 +500,8 @@ def GenerateMatrix(options):
                                 for detection_rule in object['detection_rules']:
                                     mitresubid = 'DR' + mitreid[1:] + '.' + str(subobject).zfill(3)
                                     type = 'Detection Rules'
-                                    objectnames = [detection_rule['type']['syntax_lang'] + ' rule for ' + detection_rule['name']]
-                                    objectdescriptions = ['```'+detection_rule['type']['syntax_lang'].lower()+'\n'+detection_rule['rule']+'\n\n```\n\n']
+                                    objectnames = [detection_rule['name']]
+                                    objectdescriptions = [detection_rule['type']['syntax_lang'].upper()+' detection rule for '+detection_rule['name']]
                                     objecturls = ['https://https://unprotect.it/api/techniques/'+objectid]
                                     if not mitresubid in merged[type]:
                                         merged[type][mitresubid] = {}
