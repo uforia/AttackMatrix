@@ -502,7 +502,7 @@ def GenerateMatrix(options):
                                     type = 'Detection Rules'
                                     objectnames = [detection_rule['name']]
                                     objectdescriptions = [detection_rule['type']['syntax_lang'].upper()+' detection rule for '+detection_rule['name']]
-                                    objecturls = ['https://https://unprotect.it/api/techniques/'+objectid]
+                                    objecturls = ['https://unprotect.it/api/techniques/'+objectid]
                                     if not mitresubid in merged[type]:
                                         merged[type][mitresubid] = {}
                                     merged[type][mitresubid]['Metadata'] = {
