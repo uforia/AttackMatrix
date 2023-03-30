@@ -10,6 +10,7 @@ __pycache__/
 .Python
 env/
 build/
+config/settings.py
 config/settings.py.kpn
 matrices/*.json
 matrices/*.yaml

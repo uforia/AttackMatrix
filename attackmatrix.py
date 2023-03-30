@@ -19,6 +19,7 @@ import json
 import pathlib
 import pprint
 import re
+import requests
 import shutil
 import string
 import sys
@@ -44,10 +45,12 @@ typemap = {
     'data component': 'Data Sources',
     'data source': 'Data Sources',
     'detections': 'Data Sources',
+    'detection-rules': 'Detections',
     'intrusion-set': 'Actors',
     'malware': 'Malwares',
     'mitigation': 'Mitigations',
     'mitigations': 'Mitigations',
+    'snippets': 'Code Snippets',
     'tactic': 'Tactics',
     'tactics': 'Tactics',
     'technique': 'Techniques',
@@ -57,14 +60,15 @@ typemap = {
     'uid': 'UID',
     'x-mitre-data-component': 'Data Sources',
     'x-mitre-data-source': 'Data Sources',
-    'x-mitre-matrix': 'Matrices',
     'x-mitre-tactic': 'Tactics',
 }
 categories=[
     'Actors',
     'Campaigns',
     'Case Studies',
+    'Code Snippets',
     'Data Sources',
+    'Detection Rules',
     'Malwares',
     'Matrices',
     'Mitigations',
@@ -430,6 +434,96 @@ def GenerateMatrix(options):
                     'description': [matrixdescription],
                     'url': [matrixurl],
             }}
+            if matrixtype == 'unprotectit':
+                with open(matrixfile, 'r') as f:
+                    contents = json.loads(f.read())
+                    if 'techniques' in contents:
+                        objects = contents['techniques']
+                try:
+                    for object in objects:
+                        ids = object['unprotect_id'].replace(' ','').split(',')
+                        for id in ids:
+                            if id.startswith('T') or id.startswith('U'):
+                                objectid = str(object['id'])
+                                mitreid = id
+                                objectnames = []
+                                objectdescriptions = []
+                                objecturls = []
+                                if 'name' in object:
+                                    objectnames = object['name']
+                                if 'description' in object:
+                                    objectdescriptions = object['description']
+                                for url in object['resources'].split('\r\n'):
+                                    objecturls.append(url)
+                                type = 'Techniques'
+                                if not mitreid in merged[type]:
+                                    merged[type][mitreid] = {}
+                                merged[type][mitreid]['Metadata'] = {
+                                    'name': objectnames,
+                                    'description': objectdescriptions,
+                                    'url': objecturls,
+                                }
+                                # Add the matrix to the ID
+                                if 'Matrices' not in merged[type][mitreid]:
+                                    merged[type][mitreid]['Matrices'] = {}
+                                if not matrix in merged[type][mitreid]['Matrices']:
+                                    merged[type][mitreid]['Matrices'][matrix] = merged['Matrices'][matrix]['Metadata']
+                                # Add the UID to the list
+                                merged[type]['UIDs'][mitreid] = mitreid
+                                if not mitreid in merged[type]:
+                                    merged[type][mitreid] = {}
+                                subobject = 1
+                                for snippet in object['snippets']:
+                                    mitresubid = 'CS' + mitreid[1:] + '.' + str(subobject).zfill(3)
+                                    type = 'Code Snippets'
+                                    objectdescriptions = []
+                                    if 'technique' in snippet:
+                                        objecturls = [snippet['technique']]
+                                    if 'description' in snippet:
+                                        objectdescriptions = object['description']
+                                    if not mitresubid in merged[type]:
+                                        merged[type][mitresubid] = {}
+                                    merged[type][mitresubid]['Metadata'] = {
+                                        'name': objectnames,
+                                        'description': objectdescriptions,
+                                        'url': objecturls,
+                                    }
+                                    # Add the matrix to the ID
+                                    if 'Matrices' not in merged[type][mitresubid]:
+                                        merged[type][mitresubid]['Matrices'] = {}
+                                    if not matrix in merged[type][mitresubid]['Matrices']:
+                                        merged[type][mitresubid]['Matrices'][matrix] = merged['Matrices'][matrix]['Metadata']
+                                    # Add the UID to the list
+                                    merged[type]['UIDs'][mitresubid] = mitresubid
+                                    subobject += 1
+                                subobject = 1
+                                for detection_rule in object['detection_rules']:
+                                    mitresubid = 'DR' + mitreid[1:] + '.' + str(subobject).zfill(3)
+                                    type = 'Detection Rules'
+                                    objectnames = detection_rule['type']['syntax_lang'] + ' rule for ' + detection_rule['name']
+                                    objectdescriptions = [detection_rule['rule']]
+                                    objecturls = ['https://https://unprotect.it/api/techniques/'+objectid]
+                                    if not mitresubid in merged[type]:
+                                        merged[type][mitresubid] = {}
+                                    merged[type][mitresubid]['Metadata'] = {
+                                        'name': objectnames,
+                                        'description': objectdescriptions,
+                                        'url': objecturls,
+                                    }
+                                    # Add the matrix to the ID
+                                    if 'Matrices' not in merged[type][mitresubid]:
+                                        merged[type][mitresubid]['Matrices'] = {}
+                                    if not matrix in merged[type][mitresubid]['Matrices']:
+                                        merged[type][mitresubid]['Matrices'][matrix] = merged['Matrices'][matrix]['Metadata']
+                                    # Add the UID to the list
+                                    merged[type]['UIDs'][mitresubid] = mitresubid
+                                    subobject += 1
+                            if 'attack' in mitreid:
+                                print(mitreid)
+                except:
+                    print("Failed to parse a Unprotect.it object:")
+                    pprint.pprint(object)
+                    raise
             if matrixtype == 'yaml':
                 with open(matrixfile, 'r') as f:
                     objects = yaml.safe_load(f.read())
@@ -463,8 +557,7 @@ def GenerateMatrix(options):
                     print("Failed to parse a YAML object:")
                     pprint.pprint(object)
                     raise
-            if matrixtype == 'json':
-                # Debug code
+            if matrixtype == 'stix-json':
                 with open(matrixfile, 'r') as f:
                     contents = json.loads(f.read())
                     if 'objects' in contents:
@@ -542,6 +635,53 @@ def GenerateMatrix(options):
             matrixdescription = Matrices[matrix]['description']
             matrixtype = Matrices[matrix]['type']
             matrixurl = Matrices[matrix]['url']
+            if matrixtype == 'unprotectit':
+                with open(matrixfile, 'r') as f:
+                    contents = json.loads(f.read())
+                    if 'techniques' in contents:
+                        objects = contents['techniques']
+                try:
+                    # Link all objects
+                    for object in objects:
+                        ids = object['unprotect_id'].replace(' ','').split(',')
+                        for id in ids:
+                            if id.startswith('T') or id.startswith('U'):
+                                try:
+                                    sourcetype = 'Techniques'
+                                    sourcemitreid = id
+                                    source = merged[sourcetype][sourcemitreid]
+                                    subobject = 1
+                                    for snippet in object['snippets']:
+                                        targetmitresubid = 'CS' + sourcemitreid[1:] + '.' + str(subobject).zfill(3)
+                                        targettype = 'Code Snippets'
+                                        subobject += 1
+                                        target = merged[targettype][targetmitresubid]
+                                        if not targettype in source:
+                                            source[targettype] = {}
+                                        source[targettype][targetmitresubid] = target['Metadata']
+                                        if not sourcetype in target:
+                                            target[sourcetype] = {}
+                                        target[sourcetype][sourcemitreid] = source['Metadata']
+                                    subobject = 1
+                                    for detection_rule in object['detection_rules']:
+                                        targetmitresubid = 'DR' + sourcemitreid[1:] + '.' + str(subobject).zfill(3)
+                                        targettype = 'Detection Rules'
+                                        subobject += 1
+                                        target = merged[targettype][targetmitresubid]
+                                        if not targettype in source:
+                                            source[targettype] = {}
+                                        source[targettype][targetmitresubid] = target['Metadata']
+                                        if not sourcetype in target:
+                                            target[sourcetype] = {}
+                                        target[sourcetype][sourcemitreid] = source['Metadata']
+                                except:
+                                    print("Failed to build a relationship between:")
+                                    print(sourcetype+'/'+sourcemitreid,'->',targettype+'/'+targetmitresubid)
+                                    raise
+                except:
+                    print("Failed to parse a Unprotect.it object:")
+                    pprint.pprint(object)
+                    raise
             if matrixtype == 'yaml':
                 with open(matrixfile, 'r') as f:
                     objects = yaml.safe_load(f.read())
@@ -581,7 +721,7 @@ def GenerateMatrix(options):
                     print("Failed to parse a YAML object:")
                     pprint.pprint(object)
                     raise
-            if matrixtype == 'json':
+            if matrixtype == 'stix-json':
                 with open(matrixfile, 'r') as f:
                     objects = json.loads(f.read())['objects']
                 try:
@@ -629,13 +769,51 @@ def DownloadMatrices(options):
     for matrix in Matrices:
         file, url = options.cachedir+'/'+Matrices[matrix]['file'], Matrices[matrix]['url']
         jsonfile = pathlib.Path(file)
-        if not jsonfile.exists() or options.force:
-            try:
-                logging.info('Downloading ' + url)
-                with urllib.request.urlopen(url) as response, open(jsonfile, 'wb') as outfile:
-                    shutil.copyfileobj(response, outfile)
-            except urllib.error.HTTPError as e:
-                logging.error('Download of ' + url + ' failed: ' + e.reason)
+        if Matrices[matrix]['type'] in ('stix-json', 'yaml'):
+            if not jsonfile.exists() or options.force:
+                try:
+                    logging.info('Downloading ' + url)
+                    with urllib.request.urlopen(url) as response, open(jsonfile, 'wb') as outfile:
+                        shutil.copyfileobj(response, outfile)
+                except urllib.error.HTTPError as e:
+                    logging.error('Download of ' + url + ' failed: ' + e.reason)
+        if Matrices[matrix]['type'] in ('unprotectit',):
+            if not jsonfile.exists() or options.force:
+                try:
+                    page = 1
+                    techniques = {'techniques': []}
+                    logging.info('Downloading ' + url + ' page ' + str(page))
+                    with requests.get(url, headers={'Content-Type': 'application/json'}) as response:
+                        json_response = response.json()
+                        if 'count' in json_response:
+                            if 'results' in json_response:
+                                results = json_response['results']
+                                for result in results:
+                                    techniques['techniques'].append(result)
+                            # Grab the next pages as well (if they exist)
+                            if 'next' in json_response:
+                                nextpage = json_response['next']
+                                while nextpage:
+                                    logging.info('Downloading ' + url + ' page ' + str(nextpage))
+                                    with requests.get(nextpage, headers={'Content-Type': 'application/json'}) as response:
+                                        json_response = response.json()
+                                        if 'count' in json_response:
+                                            if 'results' in json_response:
+                                                results = json_response['results']
+                                                for result in results:
+                                                    techniques['techniques'].append(result)
+                                                if 'next' in json_response:
+                                                    nextpage = json_response['next']
+                    if len(techniques):
+                        with open(file, mode='w') as f:
+                            cache = json.dumps(techniques)
+                            f.write(cache)
+                            text = "Unprotect.it cache rebuilt."
+                            return {'messages': [
+                                {'text': text},
+                            ]}
+                except urllib.error.HTTPError as e:
+                    logging.error('Download of ' + url + ' failed: ' + e.reason)
 
 
 if __name__ == "__main__":

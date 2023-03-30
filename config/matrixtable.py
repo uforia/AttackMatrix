@@ -5,7 +5,7 @@ Matrices = {
     'name': 'MITRE ATT&CK® Matrix for Enterprise',
     'description': 'The Matrix contains information for the following platforms: Windows, macOS, Linux, PRE, Azure AD, Office 365, Google Workspace, SaaS, IaaS, Network, Containers.',
     'file': 'enterprise-attack.json',
-    'type': 'json',
+    'type': 'stix-json',
     'url': 'https://raw.githubusercontent.com/mitre/cti/master/'
            'enterprise-attack/enterprise-attack.json',
   },
@@ -13,7 +13,7 @@ Matrices = {
     'name': 'MITRE ATT&CK® Matrix for ICS',
     'description': 'ATT&CK for ICS is a knowledge base useful for describing the actions an adversary may take while operating within an ICS network. The knowledge base can be used to better characterize and describe post-compromise adversary behavior.',
     'file': 'ics-attack.json',
-    'type': 'json',
+    'type': 'stix-json',
     'url': 'https://raw.githubusercontent.com/mitre/cti/master/'
            'ics-attack/ics-attack.json',
   },
@@ -21,7 +21,7 @@ Matrices = {
     'name': 'MITRE ATT&CK® Matrix for PRE',
     'description': 'MITRE ATT&CK® Matrix for Enterprise, covering PREparatory techniques.',
     'file': 'pre-attack.json',
-    'type': 'json',
+    'type': 'stix-json',
     'url': 'https://raw.githubusercontent.com/mitre/cti/master/'
            'pre-attack/pre-attack.json',
   },
@@ -29,7 +29,7 @@ Matrices = {
     'name': 'MITRE ATT&CK® Matrix for Mobile',
     'description': 'MITRE ATT&CK Matrix for Android and iOS.',
     'file': 'mobile-attack.json',
-    'type': 'json',
+    'type': 'stix-json',
     'url': 'https://raw.githubusercontent.com/mitre/cti/master/'
            'mobile-attack/mobile-attack.json',
   },
@@ -39,6 +39,13 @@ Matrices = {
     'file': 'fight.yaml',
     'type': 'yaml',
     'url': 'https://raw.githubusercontent.com/mitre/FiGHT/main/fight.yaml',
+  },
+  'Unprotect.it': {
+    'name': 'Unprotect.it Database',
+    'description': 'This project aims to provide Malware Analysts and Defenders with actionable insights and detection capabilities to shorten their response times.',
+    'file': 'unprotectit.json',
+    'type': 'unprotectit',
+    'url': 'https://unprotect.it/api/techniques/',
   },
 }
 
