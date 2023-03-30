@@ -450,9 +450,9 @@ def GenerateMatrix(options):
                                 objectdescriptions = []
                                 objecturls = []
                                 if 'name' in object:
-                                    objectnames = object['name']
+                                    objectnames = [object['name']]
                                 if 'description' in object:
-                                    objectdescriptions = object['description']
+                                    objectdescriptions = [object['description']]
                                 for url in object['resources'].split('\r\n'):
                                     objecturls.append(url)
                                 type = 'Techniques'
