@@ -326,7 +326,7 @@ def findActorByTTPs(options, ttps=[]):
             response = collections.OrderedDict()
             ttps = [ttp.upper() for ttp in ttps]
             num_given_ttps = len(ttps)
-            slices = list(reversed([_ for _ in sorted(list(map(ttps.__getitem__, itertools.starmap(slice, itertools.combinations(range(len(ttps)+1), 2)))), key=len) if len(_)>2]))
+            slices = list(reversed([_ for _ in sorted(list(map(ttps.__getitem__, itertools.starmap(slice, itertools.combinations(range(len(ttps)+1), 2)))), key=len) if len(_)>=options.minttpmatch]))
             if len(slices):
                 for subset in slices:
                     searchterms = '&ttps='.join([urllib.parse.quote(_) for _ in subset])
@@ -850,6 +850,13 @@ if __name__ == "__main__":
                         required=False,
                         help='[optional] Port the daemon should listen '
                              'on (default: ' + str(options.port) + ').')
+    parser.add_argument('-n', '--numttpmatch',
+                        dest='numttpmatch',
+                        default=options.numttpmatch,
+                        required=False,
+                        help='[optional] Minimum number of TTPs to match '
+                             'to actors (for the \'findactor\' feature) '
+                             '(default: ' + str(options.numttpmatch) + ').')
     parser.add_argument('-k', '--key',
                         dest='token',
                         default=options.token,
