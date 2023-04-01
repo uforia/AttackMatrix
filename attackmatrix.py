@@ -326,7 +326,7 @@ def findActorByTTPs(options, ttps=[]):
             response = collections.OrderedDict()
             ttps = [ttp.upper() for ttp in ttps]
             num_given_ttps = len(ttps)
-            slices = list(reversed([_ for _ in sorted(list(map(ttps.__getitem__, itertools.starmap(slice, itertools.combinations(range(len(ttps)+1), 2)))), key=len) if len(_)>=options.minttpmatch]))
+            slices = list(reversed([_ for _ in sorted(list(map(ttps.__getitem__, itertools.starmap(slice, itertools.combinations(range(len(ttps)+1), 2)))), key=len) if len(_)>=options.numttpmatch]))
             if len(slices):
                 for subset in slices:
                     searchterms = '&ttps='.join([urllib.parse.quote(_) for _ in subset])
