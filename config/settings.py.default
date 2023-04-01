@@ -5,6 +5,8 @@
 # Listening IP and PORT
 ip = '0.0.0.0'
 port = 8008
+# Minimum number of TTPs to match to actors (for the 'findactor' feature), default: 4
+numttpmatch = 4
 # Optional authentication token. 'None' means disabled.
 token = None
 #
