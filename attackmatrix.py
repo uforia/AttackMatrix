@@ -914,7 +914,7 @@ if __name__ == "__main__":
             port = int(options.port)
         except ValueError:
             logging.error('The listening port must be a numeric value')
-        uvicorn.run('attackmatrix:app', host=options.ip, port=options.port, log_level='info', reload=True)
+        uvicorn.run('attackmatrix:app', host=options.ip, port=options.port, log_level='info', reload=False)
 else:
     '''
     Module import: GenerateMatrix() to get a Python dict
