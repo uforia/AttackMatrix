@@ -473,51 +473,53 @@ def GenerateMatrix(options):
                                 if not mitreid in merged[type]:
                                     merged[type][mitreid] = {}
                                 subobject = 1
-                                for snippet in object['snippets']:
-                                    mitresubid = 'CS' + mitreid[1:] + '.' + str(subobject).zfill(3)
-                                    type = 'Code Snippets'
-                                    objectdescriptions = []
-                                    if 'technique' in snippet:
-                                        objecturls = [snippet['technique']]
-                                    if 'description' in snippet:
-                                        objectdescriptions = [object['description']]
-                                    if not mitresubid in merged[type]:
-                                        merged[type][mitresubid] = {}
-                                    merged[type][mitresubid]['Metadata'] = {
-                                        'name': objectnames,
-                                        'description': objectdescriptions,
-                                        'url': objecturls,
-                                    }
-                                    # Add the matrix to the ID
-                                    if 'Matrices' not in merged[type][mitresubid]:
-                                        merged[type][mitresubid]['Matrices'] = {}
-                                    if not matrix in merged[type][mitresubid]['Matrices']:
-                                        merged[type][mitresubid]['Matrices'][matrix] = merged['Matrices'][matrix]['Metadata']
-                                    # Add the UID to the list
-                                    merged[type]['UIDs'][mitresubid] = mitresubid
-                                    subobject += 1
+                                if 'snippets' in object:
+                                    for snippet in object['snippets']:
+                                        mitresubid = 'CS' + mitreid[1:] + '.' + str(subobject).zfill(3)
+                                        type = 'Code Snippets'
+                                        objectdescriptions = []
+                                        if 'technique' in snippet:
+                                            objecturls = [snippet['technique']]
+                                        if 'description' in snippet:
+                                            objectdescriptions = [object['description']]
+                                        if not mitresubid in merged[type]:
+                                            merged[type][mitresubid] = {}
+                                        merged[type][mitresubid]['Metadata'] = {
+                                            'name': objectnames,
+                                            'description': objectdescriptions,
+                                            'url': objecturls,
+                                        }
+                                        # Add the matrix to the ID
+                                        if 'Matrices' not in merged[type][mitresubid]:
+                                            merged[type][mitresubid]['Matrices'] = {}
+                                        if not matrix in merged[type][mitresubid]['Matrices']:
+                                            merged[type][mitresubid]['Matrices'][matrix] = merged['Matrices'][matrix]['Metadata']
+                                        # Add the UID to the list
+                                        merged[type]['UIDs'][mitresubid] = mitresubid
+                                        subobject += 1
                                 subobject = 1
-                                for detection_rule in object['detection_rules']:
-                                    mitresubid = 'DR' + mitreid[1:] + '.' + str(subobject).zfill(3)
-                                    type = 'Detection Rules'
-                                    objectnames = [detection_rule['name']]
-                                    objectdescriptions = [detection_rule['type']['syntax_lang'].upper()+' detection rule for '+detection_rule['name']]
-                                    objecturls = ['https://unprotect.it/api/techniques/'+objectid]
-                                    if not mitresubid in merged[type]:
-                                        merged[type][mitresubid] = {}
-                                    merged[type][mitresubid]['Metadata'] = {
-                                        'name': objectnames,
-                                        'description': objectdescriptions,
-                                        'url': objecturls,
-                                    }
-                                    # Add the matrix to the ID
-                                    if 'Matrices' not in merged[type][mitresubid]:
-                                        merged[type][mitresubid]['Matrices'] = {}
-                                    if not matrix in merged[type][mitresubid]['Matrices']:
-                                        merged[type][mitresubid]['Matrices'][matrix] = merged['Matrices'][matrix]['Metadata']
-                                    # Add the UID to the list
-                                    merged[type]['UIDs'][mitresubid] = mitresubid
-                                    subobject += 1
+                                if 'detection_rules' in object:
+                                    for detection_rule in object['detection_rules']:
+                                        mitresubid = 'DR' + mitreid[1:] + '.' + str(subobject).zfill(3)
+                                        type = 'Detection Rules'
+                                        objectnames = [detection_rule['name']]
+                                        objectdescriptions = [detection_rule['type']['syntax_lang'].upper()+' detection rule for '+detection_rule['name']]
+                                        objecturls = ['https://unprotect.it/api/techniques/'+objectid]
+                                        if not mitresubid in merged[type]:
+                                            merged[type][mitresubid] = {}
+                                        merged[type][mitresubid]['Metadata'] = {
+                                            'name': objectnames,
+                                            'description': objectdescriptions,
+                                            'url': objecturls,
+                                        }
+                                        # Add the matrix to the ID
+                                        if 'Matrices' not in merged[type][mitresubid]:
+                                            merged[type][mitresubid]['Matrices'] = {}
+                                        if not matrix in merged[type][mitresubid]['Matrices']:
+                                            merged[type][mitresubid]['Matrices'][matrix] = merged['Matrices'][matrix]['Metadata']
+                                        # Add the UID to the list
+                                        merged[type]['UIDs'][mitresubid] = mitresubid
+                                        subobject += 1
                             if 'attack' in mitreid:
                                 print(mitreid)
                 except:
@@ -651,29 +653,31 @@ def GenerateMatrix(options):
                                     sourcemitreid = id
                                     source = merged[sourcetype][sourcemitreid]
                                     subobject = 1
-                                    for snippet in object['snippets']:
-                                        targetmitresubid = 'CS' + sourcemitreid[1:] + '.' + str(subobject).zfill(3)
-                                        targettype = 'Code Snippets'
-                                        subobject += 1
-                                        target = merged[targettype][targetmitresubid]
-                                        if not targettype in source:
-                                            source[targettype] = {}
-                                        source[targettype][targetmitresubid] = target['Metadata']
-                                        if not sourcetype in target:
-                                            target[sourcetype] = {}
-                                        target[sourcetype][sourcemitreid] = source['Metadata']
+                                    if 'snippets' in object:
+                                        for snippet in object['snippets']:
+                                            targetmitresubid = 'CS' + sourcemitreid[1:] + '.' + str(subobject).zfill(3)
+                                            targettype = 'Code Snippets'
+                                            subobject += 1
+                                            target = merged[targettype][targetmitresubid]
+                                            if not targettype in source:
+                                                source[targettype] = {}
+                                            source[targettype][targetmitresubid] = target['Metadata']
+                                            if not sourcetype in target:
+                                                target[sourcetype] = {}
+                                            target[sourcetype][sourcemitreid] = source['Metadata']
                                     subobject = 1
-                                    for detection_rule in object['detection_rules']:
-                                        targetmitresubid = 'DR' + sourcemitreid[1:] + '.' + str(subobject).zfill(3)
-                                        targettype = 'Detection Rules'
-                                        subobject += 1
-                                        target = merged[targettype][targetmitresubid]
-                                        if not targettype in source:
-                                            source[targettype] = {}
-                                        source[targettype][targetmitresubid] = target['Metadata']
-                                        if not sourcetype in target:
-                                            target[sourcetype] = {}
-                                        target[sourcetype][sourcemitreid] = source['Metadata']
+                                    if 'detection_rules' in object:
+                                        for detection_rule in object['detection_rules']:
+                                            targetmitresubid = 'DR' + sourcemitreid[1:] + '.' + str(subobject).zfill(3)
+                                            targettype = 'Detection Rules'
+                                            subobject += 1
+                                            target = merged[targettype][targetmitresubid]
+                                            if not targettype in source:
+                                                source[targettype] = {}
+                                            source[targettype][targetmitresubid] = target['Metadata']
+                                            if not sourcetype in target:
+                                                target[sourcetype] = {}
+                                            target[sourcetype][sourcemitreid] = source['Metadata']
                                 except:
                                     print("Failed to build a relationship between:")
                                     print(sourcetype+'/'+sourcemitreid,'->',targettype+'/'+targetmitresubid)
